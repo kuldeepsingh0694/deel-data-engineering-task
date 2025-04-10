@@ -17,10 +17,36 @@ This command ensures the stack runs in detached mode (-d) with a rebuilt environ
 ##Current Approach
 Data Extraction
 Incremental Extraction from Transaction Tables: Data is extracted incrementally from transactional tables based on the updated_at field. Instead of deleting or merging data (which could increase processing time), we retain all records and rely on the primary key (PK) and last updated time to determine the current state. This approach avoids writing analytical queries directly on the transactional database, which experiences heavy writes. In a production environment, it is recommended to use a read replica database for querying.
+
+## Pipieline
+
+Extract_to_staging.py >>>>>  ETL_Pipeline.py >>>>>> Cli.py
+
 Full Load for Dimension Tables: Dimension tables (e.g., products, customers) are truncated and reloaded due to their smaller size, ensuring a clean dataset. All extracted data is staged in the staging environment (Bronze Tier).
+
+
 
 Replication Attempt
 PostgreSQL Logical Replication: An attempt was made to use PostgreSQL's built-in logical replication with a publisher and subscriber model. However, due to long-running replication issues (cause unknown), the approach was abandoned in favor of direct SQL queries.
+
+## ETL Pipeline Script Explanation
+The `app/src/etl_pipeline.py` script is responsible for transforming data from the `staging` schema (Bronze Tier) into the `analytics` schema (Silver Tier) by aggregating and enriching the data for analytical purposes. Below is an overview of its functionality:
+
+- **Purpose**: The script processes staged data (e.g., `products`, `customers`, `orders`, `order_items`) to create aggregated fact tables in the `analytics` schema, such as `open_orders_agg`, `order_items_pending_agg`, and `customer_pending_orders_agg`.
+- **Implementation**:
+  - Uses SQLAlchemy for database connections and pandas for data manipulation.
+  - Connects to the PostgreSQL database using a hardcoded connection string (`postgresql://finance_db_user:1234@trans-db:5432/finance_db`), which should be replaced with environment variables in production.
+  - Executes SQL queries to join and aggregate data from the `staging` tables.
+- **Key Transformations**:
+  - **Open Orders Aggregation**: Groups `orders` data by `delivery_date` and `status` to count pending orders.
+  - **Pending Items Aggregation**: Calculates the number of pending items per `product_id` by joining `order_items` with `orders` where `status` is 'pending'.
+  - **Top Customers Aggregation**: Identifies the top customers by counting pending orders per `customer_id`.
+- **Execution**: The script truncates existing tables in the `analytics` schema and loads the transformed data, ensuring a full refresh for each run. This aligns with the incremental extraction from transactional tables and full load from dimension tables.
+- **Limitations**: The script assumes data consistency (e.g., matching `order_id` between `orders` and `order_items`). Data gaps (e.g., missing `order_id` entries) may result in null values, as noted in the Data Gaps section.
+- **File Location**: Located at `app/src/etl_pipeline.py`, it is executed via the `etl-service` in `docker-compose.yml`.
+
+To run the ETL process manually, use:
+``` docker-compose run etl-service ```
 
 Building the Enriched Layer
 Approach 1: Python Scripts: Python scripts read data from the staging environment to build fact tables. Note: is_active flags were excluded from queries due to a lack of context in the task description.
@@ -30,7 +56,7 @@ Historic View: Contains data up to the previous date (excluding the current date
 Current Date View: Contains data for the current date.
 A union view can be created on top of these to fetch both latest and historic data with improved performance.
 
-Data Gaps and Potential Issues
+## Data Gaps and Potential Issues
 Order ID Mismatch: Not all order_id values from the operations.orders table are present in the operations.order_items table, likely due to randomness in the sample data. This causes the pending_items output to be null in most cases. To investigate:
 ```bash
 SELECT DISTINCT a.order_id, b.order_id
