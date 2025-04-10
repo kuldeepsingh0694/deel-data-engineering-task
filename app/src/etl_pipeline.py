@@ -29,7 +29,7 @@ def main():
 SELECT 
     delivery_date, status, COUNT(*) as order_count
 FROM ranked_orders
-WHERE rn = 1 and  status = 'PENDING'
+WHERE rn = 1 and  status in ('PENDING', 'PROCESSING')
                 GROUP BY delivery_date, status
                
                 
