@@ -1,3 +1,7 @@
+-- Create staging schema and tables
+
+
+DROP SCHEMA IF EXISTS operations CASCADE;
 CREATE SCHEMA IF NOT EXISTS operations;
 
 CREATE TABLE IF NOT EXISTS operations.customers(
@@ -53,6 +57,7 @@ CREATE TABLE IF NOT EXISTS operations.order_items(
 );
 
 alter table operations.order_items REPLICA IDENTITY FULL;
+create publication mypub for table operations.order_items ;
 
 -- Create CDC User
 
@@ -312,3 +317,25 @@ SELECT cron.schedule(
     '*/1 * * * *',
     $$ call generate_orders(100); $$
 );
+
+--- NEW DB FOR REPLICATION TESTING
+-- CREATE DATABASE finance_db_subscriber;
+
+-- USE DATABASE finance_db_subscriber;
+-- DROP SCHEMA IF EXISTS operations CASCADE;
+-- CREATE SCHEMA IF NOT EXISTS operations;
+
+-- CREATE TABLE IF NOT EXISTS operations.order_items(
+--     order_item_id    BIGSERIAL NOT NULL PRIMARY KEY,
+--     order_id         BIGINT,
+--     product_id       BIGINT,
+--     quanity          INTEGER,
+--     updated_at       TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+--     updated_by       BIGINT,
+--     created_at       TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+--     created_by       BIGINT
+-- );
+
+-- CREATE SUBSCRIPTION mysub1
+-- CONNECTION 'host=localhost port=5432 dbname=finance_db user=finance_db_user password=1234'
+-- PUBLICATION mypub;

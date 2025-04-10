@@ -1,3 +1,24 @@
+# services:
+#   db:
+#     build:
+#       context: ./docker/postgres-db
+#     environment:
+#       - POSTGRES_USER=finance_db_user
+#       - POSTGRES_PASSWORD=1234
+#       - POSTGRES_DB=finance_db
+#     volumes:
+#         # - "${PWD}/db-data:/var/lib/postgresql/data"
+#         # - "${PWD}/db-scripts/initialize_db_ddl.sql:/docker-entrypoint-initdb.d/initialize_db_ddl.sql"
+#       - "db-data:/var/lib/postgresql/data"
+#       - "./db-scripts/initialize_db_ddl.sql:/docker-entrypoint-initdb.d/1_initialize_db_ddl.sql"
+#       - "./db-scripts/analytical_schema.sql:/docker-entrypoint-initdb.d/2_analytical_schema.sql"
+
+#     ports:
+#       - "5432:5432"
+#     command: ["postgres", "-c", "wal_level=logical", "-c", "hot_standby=on"]
+  
+# volumes:
+#   db-data:
 services:
   transactions-db:
     build:
@@ -7,11 +28,85 @@ services:
       - POSTGRES_PASSWORD=1234
       - POSTGRES_DB=finance_db
     volumes:
-        # - "${PWD}/db-data:/var/lib/postgresql/data"
-        # - "${PWD}/db-scripts/initialize_db_ddl.sql:/docker-entrypoint-initdb.d/initialize_db_ddl.sql"
+      - "db-data:/var/lib/postgresql/data"
       - "./db-scripts/initialize_db_ddl.sql:/docker-entrypoint-initdb.d/1_initialize_db_ddl.sql"
+      - "./db-scripts/analytical_schema.sql:/docker-entrypoint-initdb.d/2_analytical_schema.sql"
+      - "./db-scripts/init.sql:/docker-entrypoint-initdb.d/3_init.sql"
     ports:
       - "5432:5432"
-    command: ["postgres", "-c", "wal_level=logical", "-c", "hot_standby=on"]
+    command: 
+      - "postgres"
+      - "-c" 
+      - "wal_level=logical"
+      - "-c" 
+      # - "max_wal_senders=10"
+      # - "-c" 
+      # - "max_replication_slots=10"
+      # - "-c" 
+      # - "wal_log_hints=on"
+      # - "-c" 
+      # - "max_logical_replication_workers=4"
+      # - "-c" 
+      # - "wal_receiver_status_interval=10s"
+      # - "-c" 
+      # - "max_slot_wal_keep_size=1024"
+      # - "-c" 
+      - "listen_addresses=*"
+      # - "-c" 
+      # - "log_min_messages=DEBUG1"
+
+  extract-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    depends_on:
+      - transactions-db
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_USER=finance_db_user
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=finance_db
+      - POSTGRES_PORT=5432
+    command: ["python", "app/src/extract_to_staging.py"]
+    # Optional: Run continuously with a sleep loop
+    entrypoint: ["/bin/sh", "-c", "while true; do python app/src/extract_to_staging.py; sleep 30; done"]
+
+  etl-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    depends_on:
+      - transactions-db
+      - extract-service
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_USER=finance_db_user
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=finance_db
+      - POSTGRES_PORT=5432
+    command: ["python", "app/src/etl_pipeline.py"]
+    # Optional: Run continuously with a sleep loop
+    entrypoint: ["/bin/sh", "-c", "while true; do python app/src/etl_pipeline.py; sleep 60; done"]
+
+  cli-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    depends_on:
+      - transactions-db
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_USER=finance_db_user
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=finance_db
+      - POSTGRES_PORT=5432
+    entrypoint: ["python", "app/src/cli.py"]
+    stdin_open: true  # Keep container running for interactive use
+    tty: true
+
 volumes:
   db-data:
+  db-data-subscriber:
