@@ -82,10 +82,13 @@ Output file: open_orders_result_<timestamp>.csv.
 Logging: Implement comprehensive logging to track execution and errors.
 Secrets Management: Handle sensitive data (e.g., database credentials) using environment variables with the os module instead of hardcoding.
 Consolidate CSV Extraction: Create a single command to run all export queries and consider adding email delivery of the CSV files.
-Other Ideas
+
+## Other Ideas
 Handling Large Volumes (>100M records in 10 minutes):
 Kafka with PySpark and Debezium: Implement Change Data Capture (CDC) on the database using Debezium, process records with PySpark, and store them in a Delta Lake storage system, which provides ACID transactions on the file system.
 Alternative Storage: Use columnar storage databases like Amazon Redshift or Snowflake with query acceleration for better performance on large querying datasets.
+![image](https://github.com/user-attachments/assets/0b67141f-8990-480d-b50b-0f9d388df391)
+
 
 
 
