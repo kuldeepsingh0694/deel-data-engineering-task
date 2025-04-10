@@ -1,0 +1,4 @@
+delivery_date,status,order_count,total_open
+2025-04-20,PENDING,6,16.0
+2025-04-20,PROCESSING,5,16.0
+2025-04-20,REPROCESSING,5,16.0

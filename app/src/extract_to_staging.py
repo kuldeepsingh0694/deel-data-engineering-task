@@ -30,7 +30,7 @@ def extract_to_staging(session, table_name, query):
     else:
         # Incremental update for orders and order_items
         last_extract = get_last_extract_timestamp(session, table_name)
-        last_extract = last_extract - timedelta(minutes=5) if last_extract else datetime(1970, 1, 1)
+        # last_extract = last_extract - timedelta(minutes=5) if last_extract else datetime(1970, 1, 1)
         full_query = text(f"{query} WHERE updated_at > :last_extract OR created_at > :last_extract")
         logger.debug(f"Executing incremental query for {table_name}: {full_query}")
         df = pd.read_sql(full_query, session.bind, params={"last_extract": last_extract})

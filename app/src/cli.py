@@ -18,28 +18,22 @@ def get_engine():
 
 def query_open_orders(session):
     query = text("""
-        SELECT delivery_date, status, order_count
-        FROM analytics.open_orders_agg
-        WHERE status = 'PENDING'
+        SELECT * from analytics.open_orders_agg
     """)
     df = pd.read_sql(query, session.bind)
     return df
 
 def query_top_delivery_dates(session):
     query = text("""
-        SELECT delivery_date, SUM(order_count) as total_orders
-        FROM analytics.open_orders_agg
-        WHERE status = 'PENDING'
-        GROUP BY delivery_date
-        ORDER BY total_orders DESC
-        LIMIT 3
+                SELECT delivery_date,avg(total_open) from analytics.open_orders_agg group by 1 order by avg(total_open) limit 3
+
     """)
     df = pd.read_sql(query, session.bind)
     return df
 
 def query_pending_items(session):
     query = text("""
-        SELECT product_id, pending_count
+        SELECT *
         FROM analytics.order_items_pending_agg
     """)
     df = pd.read_sql(query, session.bind)
@@ -47,10 +41,7 @@ def query_pending_items(session):
 
 def query_top_customers(session):
     query = text("""
-        SELECT customer_id, pending_order_count
-        FROM analytics.customer_pending_orders_agg
-        ORDER BY pending_order_count DESC
-        LIMIT 3
+      select * from analytics.customer_pending_orders_agg
     """)
     df = pd.read_sql(query, session.bind)
     return df
