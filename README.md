@@ -79,9 +79,11 @@ Output file: open_orders_result_<timestamp>.csv.
 ```
 
 ## To-Do Items
+Asncio : Use Async while extraction this enable parllel writing | Trade off hard to debug and sacrifice code readibility 
 Logging: Implement comprehensive logging to track execution and errors.
 Secrets Management: Handle sensitive data (e.g., database credentials) using environment variables with the os module instead of hardcoding.
 Consolidate CSV Extraction: Create a single command to run all export queries and consider adding email delivery of the CSV files.
+Performance Optimization - Instead of Pandas use fireduck & in place sqlAlemchy us pycopg2 based on time reduction 
 
 ## Other Ideas
 Handling Large Volumes (>100M records in 10 minutes):
